@@ -29,6 +29,9 @@ public class GunController : MonoBehaviour
     [Header("Hit Effect")]
     public GameObject hitEffectPrefab; // Drag your splash/hit VFX here
     public float hitEffectDuration = 1f; // How long it stays before being destroyed
+    [Tooltip("Multiplier for hit effect scale. 1 = normal size")]
+    public float hitEffectScale = 0.5f;
+
 
     private int currentAmmo;
     private bool isReloading = false;
@@ -92,16 +95,16 @@ public class GunController : MonoBehaviour
             {
                 GameObject effect = Instantiate(hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
 
-                // Try to get the bounds of the hit object
+                // Inside Shoot(), after instantiating the effect
                 Renderer renderer = hit.collider.GetComponent<Renderer>();
                 if (renderer != null)
                 {
                     Vector3 boundsSize = renderer.bounds.size;
                     float averageSize = (boundsSize.x + boundsSize.y + boundsSize.z) / 3f;
 
-                    float baseScale = 0.5f; // Adjust this for the default size of your effect
-                    effect.transform.localScale = Vector3.one * averageSize * baseScale;
+                    effect.transform.localScale = Vector3.one * averageSize * hitEffectScale;
                 }
+
 
                 Destroy(effect, hitEffectDuration);
             }
