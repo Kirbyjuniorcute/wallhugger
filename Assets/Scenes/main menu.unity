@@ -224,6 +224,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cursorEnabledScenes:
   - replay
+  - main menu
 --- !u!65 &171014516
 BoxCollider:
   m_ObjectHideFlags: 0

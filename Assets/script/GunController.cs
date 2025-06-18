@@ -32,20 +32,30 @@ public class GunController : MonoBehaviour
     [Tooltip("Multiplier for hit effect scale. 1 = normal size")]
     public float hitEffectScale = 0.5f;
 
+    public AimDownSight adsScript;              // Reference to AimDownSight
+    public GameObject normalMuzzleFlash;
+    public GameObject adsMuzzleFlash;
+
 
     private int currentAmmo;
     private bool isReloading = false;
+    private PlayerSlideDuck2 slideScript;
 
     void Start()
     {
         currentAmmo = maxAmmo;
         UpdateAmmoUI();
         SetReloadSpritesActive(false);
+        slideScript = GetComponent<PlayerSlideDuck2>();
     }
 
     void Update()
     {
         if (isReloading)
+            return;
+
+        // Block shooting if sliding or ducking
+        if (slideScript != null && (slideScript.IsSliding() || slideScript.IsDucking()))
             return;
 
         if (Input.GetButtonDown("Fire1"))
@@ -58,6 +68,8 @@ public class GunController : MonoBehaviour
             StartCoroutine(ReloadRoutine());
         }
     }
+
+
 
     void Shoot()
     {
@@ -157,11 +169,23 @@ public class GunController : MonoBehaviour
 
     IEnumerator ShowMuzzleFlash()
     {
-        if (muzzleFlash != null)
+        GameObject flashToUse = null;
+
+        if (adsScript != null && adsScript.IsAiming)
         {
-            muzzleFlash.SetActive(true);
+            flashToUse = adsMuzzleFlash;
+        }
+        else
+        {
+            flashToUse = normalMuzzleFlash;
+        }
+
+        if (flashToUse != null)
+        {
+            flashToUse.SetActive(true);
             yield return new WaitForSeconds(flashDuration);
-            muzzleFlash.SetActive(false);
+            flashToUse.SetActive(false);
         }
     }
+
 }

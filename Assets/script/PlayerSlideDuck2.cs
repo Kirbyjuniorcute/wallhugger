@@ -16,6 +16,8 @@ public class PlayerSlideDuck2 : MonoBehaviour
     [Header("Objects to Enable When Sliding")]
     public List<GameObject> objectsToEnableOnSlide;
 
+    
+
     private Rigidbody rb;
     private BoxCollider box;
     private PlayerMovement movementScript;
@@ -26,12 +28,15 @@ public class PlayerSlideDuck2 : MonoBehaviour
 
     private Vector3 originalCenter;
     private Vector3 originalSize;
+    private AimDownSight adsScript;
+
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         box = GetComponent<BoxCollider>();
         movementScript = GetComponent<PlayerMovement>();
+        adsScript = GetComponent<AimDownSight>(); // Add this line
 
         originalCenter = box.center;
         originalSize = box.size;
@@ -53,10 +58,8 @@ public class PlayerSlideDuck2 : MonoBehaviour
 
         if (ctrlUp)
         {
-            if (isSliding)
-                StopSlide();
-            else if (isDucking)
-                StopDuck();
+            StopSlide(); // StopSlide will safely return if not sliding
+            StopDuck();  // Likewise
         }
 
         if (isSliding)
@@ -72,28 +75,34 @@ public class PlayerSlideDuck2 : MonoBehaviour
         if (isSliding) return;
 
         isSliding = true;
+        isDucking = false;
         slideTimer = slideDuration;
 
         AdjustColliderForCrouch();
         rb.AddForce(transform.forward * slideForce, ForceMode.Impulse);
 
         ToggleGameObjects(objectsToDisableOnSlide, false);
-        ToggleGameObjects(objectsToEnableOnSlide, true);
 
-        // Apply speed boost
+        // Only enable if not aiming
+        if (adsScript == null || !adsScript.IsAiming)
+        {
+            ToggleGameObjects(objectsToEnableOnSlide, true);
+        }
+
         if (movementScript != null)
             movementScript.speedMultiplier = slideSpeedMultiplier;
     }
 
     void StopSlide()
     {
+        if (!isSliding) return;
+
         isSliding = false;
         ResetCollider();
 
         ToggleGameObjects(objectsToDisableOnSlide, true);
         ToggleGameObjects(objectsToEnableOnSlide, false);
 
-        // Reset speed boost
         if (movementScript != null)
             movementScript.speedMultiplier = 1f;
     }
@@ -103,15 +112,26 @@ public class PlayerSlideDuck2 : MonoBehaviour
         if (isDucking) return;
 
         isDucking = true;
+        isSliding = false; // Ensure slide state is cleared
+
         AdjustColliderForCrouch();
-        // Optional: Add ducking-specific toggles if needed
+
+        // Only enable if not aiming
+        if (adsScript == null || !adsScript.IsAiming)
+        {
+            ToggleGameObjects(objectsToEnableOnSlide, true);
+        }
     }
+
 
     void StopDuck()
     {
+        if (!isDucking) return;
+
         isDucking = false;
         ResetCollider();
-        // Optional: Add ducking-specific toggles if needed
+
+        ToggleGameObjects(objectsToEnableOnSlide, false);
     }
 
     void AdjustColliderForCrouch()
@@ -128,9 +148,11 @@ public class PlayerSlideDuck2 : MonoBehaviour
 
     void ToggleGameObjects(List<GameObject> objects, bool state)
     {
+        if (objects == null) return;
+
         foreach (GameObject obj in objects)
         {
-            if (obj != null)
+            if (obj != null && obj.activeSelf != state)
                 obj.SetActive(state);
         }
     }
@@ -139,4 +161,15 @@ public class PlayerSlideDuck2 : MonoBehaviour
     {
         return Physics.Raycast(transform.position, Vector3.down, movementScript.groundCheckDistance + 0.1f);
     }
+
+    public bool IsSliding()
+    {
+        return isSliding;
+    }
+
+    public bool IsDucking()
+    {
+        return isDucking;
+    }
+
 }
