@@ -149,14 +149,14 @@ RectTransform:
   m_GameObject: {fileID: 25286730}
   m_LocalRotation: {x: -0, y: -0.071963586, z: -0, w: 0.99740726}
   m_LocalPosition: {x: 0, y: 0, z: -177}
-  m_LocalScale: {x: 0.36767656, y: 0.28216115, z: 1.2147}
+  m_LocalScale: {x: 0.28846797, y: 0.28216115, z: 1.2147}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 210940362}
   m_LocalEulerAnglesHint: {x: 0, y: -8.254, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 408, y: -37}
+  m_AnchoredPosition: {x: 408, y: 8}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &25286732
@@ -171,7 +171,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 2100000, guid: a30da53f64119d341857bdbd47bd269c, type: 2}
+  m_Material: {fileID: 2100000, guid: 755c92c98b56f584297c0c18bc159ff8, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 0.392}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}

@@ -46,5 +46,17 @@ public class AimDownSight : MonoBehaviour
         }
     }
 
+    public void CancelADS()
+    {
+        isAiming = false;
+
+        if (normalView != null) normalView.SetActive(true);
+        if (adsView != null) adsView.SetActive(false);
+
+        if (normalMuzzleFlash != null) normalMuzzleFlash.SetActive(true);
+        if (adsMuzzleFlash != null) adsMuzzleFlash.SetActive(false);
+    }
+
+
     public bool IsAiming => isAiming;
 }

@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+
 [RequireComponent(typeof(PlayerMovement))]
 public class PlayerSlideDuck2 : MonoBehaviour
 {
@@ -65,9 +66,30 @@ public class PlayerSlideDuck2 : MonoBehaviour
         if (isSliding)
         {
             slideTimer -= Time.deltaTime;
+
+            CheckSlideWallCollision();
+
             if (slideTimer <= 0)
                 StopSlide();
         }
+
+        void CheckSlideWallCollision()
+        {
+            Vector3 origin = transform.position + Vector3.up * 0.5f;
+            float radius = 0.3f;
+            float distance = 0.6f;
+
+            if (Physics.SphereCast(origin, radius, transform.forward, out RaycastHit hit, distance))
+            {
+                if (hit.collider.CompareTag("Wall"))
+                {
+                    Debug.Log("Slide blocked by wall.");
+                    StopSlide();
+                }
+            }
+        }
+
+
     }
 
     void StartSlide()
@@ -91,6 +113,16 @@ public class PlayerSlideDuck2 : MonoBehaviour
 
         if (movementScript != null)
             movementScript.speedMultiplier = slideSpeedMultiplier;
+
+        GunController gun = GetComponent<GunController>();
+        if (gun != null)
+        {
+            gun.CancelReload();
+        }
+
+
+
+
     }
 
     void StopSlide()
@@ -121,6 +153,12 @@ public class PlayerSlideDuck2 : MonoBehaviour
         {
             ToggleGameObjects(objectsToEnableOnSlide, true);
         }
+        GunController gun = GetComponent<GunController>();
+        if (gun != null)
+        {
+            gun.CancelReload();
+        }
+
     }
 
 
@@ -170,6 +208,11 @@ public class PlayerSlideDuck2 : MonoBehaviour
     public bool IsDucking()
     {
         return isDucking;
+    }
+
+    public void ForceStopSlideVisuals()
+    {
+        ToggleGameObjects(objectsToEnableOnSlide, false);
     }
 
 }

@@ -1,7 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
-using static System.Net.Mime.MediaTypeNames;
+
+
+
+
+
 
 
 public class GunController : MonoBehaviour
@@ -16,8 +20,7 @@ public class GunController : MonoBehaviour
     public Camera fpsCamera;
 
     [Header("UI")]
-    public UnityEngine.UI.Text ammoText;
-
+    public Text ammoText;
 
     [Header("Reload Animation")]
     public GameObject[] reloadSteps;
@@ -27,19 +30,18 @@ public class GunController : MonoBehaviour
     public float flashDuration = 0.05f;
 
     [Header("Hit Effect")]
-    public GameObject hitEffectPrefab; // Drag your splash/hit VFX here
-    public float hitEffectDuration = 1f; // How long it stays before being destroyed
-    [Tooltip("Multiplier for hit effect scale. 1 = normal size")]
+    public GameObject hitEffectPrefab;
+    public float hitEffectDuration = 1f;
     public float hitEffectScale = 0.5f;
 
-    public AimDownSight adsScript;              // Reference to AimDownSight
+    public AimDownSight adsScript;
     public GameObject normalMuzzleFlash;
     public GameObject adsMuzzleFlash;
-
 
     private int currentAmmo;
     private bool isReloading = false;
     private PlayerSlideDuck2 slideScript;
+    private Coroutine reloadCoroutine;
 
     void Start()
     {
@@ -63,12 +65,21 @@ public class GunController : MonoBehaviour
             Shoot();
         }
 
+        // Prevent reloading if sliding
         if (Input.GetKeyDown(KeyCode.R))
         {
-            StartCoroutine(ReloadRoutine());
+            if (slideScript != null && slideScript.IsSliding())
+            {
+                Debug.Log("Cannot reload while sliding!");
+                return; // Don't reload
+            }
+
+            if (reloadCoroutine == null) // Prevent double reload
+            {
+                reloadCoroutine = StartCoroutine(ReloadRoutine());
+            }
         }
     }
-
 
 
     void Shoot()
@@ -84,58 +95,96 @@ public class GunController : MonoBehaviour
         StartCoroutine(ShowMuzzleFlash());
 
         Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        if (Physics.Raycast(ray, out RaycastHit hit, shootRange))
+
+        // Use RaycastAll to detect everything hit
+        RaycastHit[] hits = Physics.RaycastAll(ray, shootRange);
+        float closestEnemyDistance = float.MaxValue;
+        RaycastHit? bestHit = null;
+        EnemyAI bestEnemy = null;
+
+        foreach (var hit in hits)
         {
-            Debug.Log("Hit: " + hit.collider.name);
+            if (hit.collider.isTrigger)
+                continue;
 
-            // Apply force if there's a rigidbody
-            Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.AddForce(-hit.normal * shootForce);
-            }
+            // Try to find EnemyAI in the object or its parent
+            EnemyAI enemy = hit.collider.GetComponent<EnemyAI>() ?? hit.collider.GetComponentInParent<EnemyAI>();
 
-            // Damage enemy
-            EnemyAI enemy = hit.collider.GetComponent<EnemyAI>();
             if (enemy != null)
             {
-                enemy.TakeDamage(1);
+                float distance = Vector3.Distance(transform.position, hit.point);
+                if (distance < closestEnemyDistance)
+                {
+                    closestEnemyDistance = distance;
+                    bestHit = hit;
+                    bestEnemy = enemy;
+                }
             }
+        }
 
-            // Spawn hit effect scaled to target object
+        if (bestEnemy != null && bestHit.HasValue)
+        {
+            Debug.Log("Enemy hit! Calling TakeDamage on: " + bestEnemy.gameObject.name);
+            bestEnemy.TakeDamage(1);
+
             if (hitEffectPrefab != null)
             {
-                GameObject effect = Instantiate(hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                GameObject effect = Instantiate(hitEffectPrefab, bestHit.Value.point, Quaternion.LookRotation(bestHit.Value.normal));
 
-                // Inside Shoot(), after instantiating the effect
-                Renderer renderer = hit.collider.GetComponent<Renderer>();
+                Renderer renderer = bestHit.Value.collider.GetComponent<Renderer>();
                 if (renderer != null)
                 {
                     Vector3 boundsSize = renderer.bounds.size;
                     float averageSize = (boundsSize.x + boundsSize.y + boundsSize.z) / 3f;
-
                     effect.transform.localScale = Vector3.one * averageSize * hitEffectScale;
                 }
-
 
                 Destroy(effect, hitEffectDuration);
             }
 
+            Rigidbody rb = bestHit.Value.collider.attachedRigidbody;
+            if (rb != null)
+            {
+                rb.AddForce(-bestHit.Value.normal * shootForce);
+            }
+        }
+        else
+        {
+            Debug.Log("No enemy hit.");
         }
     }
+
 
     public IEnumerator ReloadRoutine()
     {
         isReloading = true;
         Debug.Log("Reloading...");
 
+        // Disable slide visuals if sliding
+        PlayerSlideDuck2 slideScript = GetComponent<PlayerSlideDuck2>();
+        if (slideScript != null && slideScript.IsSliding())
+        {
+            slideScript.ForceStopSlideVisuals();
+        }
+
+        AimDownSight ads = GetComponent<AimDownSight>();
+        if (ads != null && ads.IsAiming)
+        {
+            ads.CancelADS(); // stop aiming first
+            yield return new WaitForSeconds(0.2f); // delay to allow ADS animation/transition
+        }
+
         int stepCount = reloadSteps.Length;
         float waitTime = stepCount > 0 ? reloadDuration / stepCount : reloadDuration;
 
         for (int i = 0; i < stepCount; i++)
         {
+            if (!isReloading) yield break;
+
             SetReloadSpritesActive(false);
-            reloadSteps[i].SetActive(true);
+            if (i < reloadSteps.Length && reloadSteps[i] != null)
+                reloadSteps[i].SetActive(true);
+
             yield return new WaitForSeconds(waitTime);
         }
 
@@ -144,7 +193,20 @@ public class GunController : MonoBehaviour
         currentAmmo = maxAmmo;
         UpdateAmmoUI();
         isReloading = false;
+        reloadCoroutine = null;
         Debug.Log("Reload complete!");
+    }
+
+    public void CancelReload()
+    {
+        if (isReloading && reloadCoroutine != null)
+        {
+            StopCoroutine(reloadCoroutine);
+            reloadCoroutine = null;
+            isReloading = false;
+            SetReloadSpritesActive(false);
+            Debug.Log("Reload canceled due to sliding!");
+        }
     }
 
     public bool IsReloading()
@@ -169,16 +231,7 @@ public class GunController : MonoBehaviour
 
     IEnumerator ShowMuzzleFlash()
     {
-        GameObject flashToUse = null;
-
-        if (adsScript != null && adsScript.IsAiming)
-        {
-            flashToUse = adsMuzzleFlash;
-        }
-        else
-        {
-            flashToUse = normalMuzzleFlash;
-        }
+        GameObject flashToUse = adsScript != null && adsScript.IsAiming ? adsMuzzleFlash : normalMuzzleFlash;
 
         if (flashToUse != null)
         {
@@ -187,5 +240,4 @@ public class GunController : MonoBehaviour
             flashToUse.SetActive(false);
         }
     }
-
 }

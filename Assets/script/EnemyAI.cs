@@ -1,7 +1,7 @@
 
-
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody), typeof(Collider))]
 public class EnemyAI : MonoBehaviour
 {
     public Transform player;
@@ -10,40 +10,43 @@ public class EnemyAI : MonoBehaviour
     private int currentHealth;
 
     public float rotationSpeed = 5f;
-    public float obstacleDetectRange = 1f; // How far ahead to check for walls
-    public LayerMask obstacleMask; // Assign this to "Ground", "Walls", "Enemy", etc.
+    public float obstacleDetectRange = 1f;
+    public LayerMask obstacleMask;
     public EnemySpawner spawner;
 
+    private Rigidbody rb;
 
     void Start()
     {
         currentHealth = maxHealth;
+        rb = GetComponent<Rigidbody>();
+        rb.useGravity = true;         // Let gravity do its job
+        rb.constraints = RigidbodyConstraints.FreezeRotation; // Prevent tipping over
     }
 
-    void Update()
+    void FixedUpdate() // physics-based movement
     {
-        if (player != null)
+        if (player == null) return;
+
+        Vector3 direction = (player.position - transform.position).normalized;
+
+        // Obstacle detection
+        if (IsObstacleInFront())
         {
-            Vector3 direction = (player.position - transform.position).normalized;
-
-            // Obstacle detection
-            if (IsObstacleInFront())
-            {
-                // Try slight turning to avoid obstacle
-                direction = Quaternion.Euler(0, 45, 0) * direction;
-                Debug.DrawRay(transform.position, direction * obstacleDetectRange, Color.red);
-            }
-
-            // Rotate toward the direction
-            if (direction != Vector3.zero)
-            {
-                Quaternion lookRotation = Quaternion.LookRotation(direction);
-                transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, rotationSpeed * Time.deltaTime);
-            }
-
-            // Move forward
-            transform.position += transform.forward * moveSpeed * Time.deltaTime;
+            direction = Quaternion.Euler(0, 45, 0) * direction;
         }
+
+        // Rotate smoothly
+        if (direction != Vector3.zero)
+        {
+            Quaternion lookRotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, rotationSpeed * Time.fixedDeltaTime);
+        }
+
+        // Move using Rigidbody (keeps grounded)
+        Vector3 moveVector = transform.forward * moveSpeed;
+        moveVector.y = rb.velocity.y; // preserve gravity effect
+        rb.velocity = moveVector;
     }
 
     bool IsObstacleInFront()
@@ -63,6 +66,8 @@ public class EnemyAI : MonoBehaviour
     public void TakeDamage(int amount)
     {
         currentHealth -= amount;
+        Debug.Log($"{gameObject.name} took {amount} damage. Health left: {currentHealth}");
+
         if (currentHealth <= 0)
         {
             if (spawner != null)
@@ -72,12 +77,8 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-
     public void ResetEnemy()
     {
         currentHealth = maxHealth;
     }
-
-
-
 }
