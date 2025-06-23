@@ -6,6 +6,8 @@ TagManager:
   tags:
   - Ground
   - Wall
+  - Enemy
+  - zone
   layers:
   - Default
   - TransparentFX
@@ -14,7 +16,7 @@ TagManager:
   - Water
   - UI
   - Ledge
-  - 
+  - zone
   - 
   - 
   - 

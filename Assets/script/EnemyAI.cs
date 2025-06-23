@@ -20,38 +20,67 @@ public class EnemyAI : MonoBehaviour
     {
         currentHealth = maxHealth;
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = true;         // Let gravity do its job
-        rb.constraints = RigidbodyConstraints.FreezeRotation; // Prevent tipping over
+        rb.useGravity = true;
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
     }
 
-    void FixedUpdate() // physics-based movement
+    void FixedUpdate()
     {
         if (player == null) return;
 
-        Vector3 direction = (player.position - transform.position).normalized;
+        Vector3 directionToPlayer = (player.position - transform.position).normalized;
+        Vector3 moveDir = directionToPlayer;
 
-        // Obstacle detection
-        if (IsObstacleInFront())
+        // Basic directions
+        bool forwardBlocked = IsObstacleInDirection(transform.forward);
+        bool backBlocked = IsObstacleInDirection(-transform.forward);
+        bool leftBlocked = IsObstacleInDirection(-transform.right);
+        bool rightBlocked = IsObstacleInDirection(transform.right);
+
+        // Diagonal directions
+        Vector3 fwdRight = (transform.forward + transform.right).normalized;
+        Vector3 fwdLeft = (transform.forward - transform.right).normalized;
+        Vector3 backRight = (-transform.forward + transform.right).normalized;
+        Vector3 backLeft = (-transform.forward - transform.right).normalized;
+
+        bool fwdRightBlocked = IsObstacleInDirection(fwdRight);
+        bool fwdLeftBlocked = IsObstacleInDirection(fwdLeft);
+        bool backRightBlocked = IsObstacleInDirection(backRight);
+        bool backLeftBlocked = IsObstacleInDirection(backLeft);
+
+        // Decision logic
+        if (forwardBlocked)
         {
-            direction = Quaternion.Euler(0, 45, 0) * direction;
+            if (!rightBlocked) moveDir = transform.right;
+            else if (!leftBlocked) moveDir = -transform.right;
+            else if (!fwdRightBlocked) moveDir = fwdRight;
+            else if (!fwdLeftBlocked) moveDir = fwdLeft;
+            else if (!backRightBlocked) moveDir = backRight;
+            else if (!backLeftBlocked) moveDir = backLeft;
+            else if (!backBlocked) moveDir = -transform.forward;
+            else moveDir = Vector3.zero;
+        }
+        else if ((leftBlocked && rightBlocked) && !backBlocked)
+        {
+            moveDir = -transform.forward;
         }
 
-        // Rotate smoothly
-        if (direction != Vector3.zero)
+        // Smooth rotate
+        if (moveDir != Vector3.zero)
         {
-            Quaternion lookRotation = Quaternion.LookRotation(direction);
+            Quaternion lookRotation = Quaternion.LookRotation(moveDir);
             transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, rotationSpeed * Time.fixedDeltaTime);
         }
 
-        // Move using Rigidbody (keeps grounded)
+        // Move
         Vector3 moveVector = transform.forward * moveSpeed;
-        moveVector.y = rb.velocity.y; // preserve gravity effect
+        moveVector.y = rb.velocity.y;
         rb.velocity = moveVector;
     }
 
-    bool IsObstacleInFront()
+    bool IsObstacleInDirection(Vector3 dir)
     {
-        return Physics.Raycast(transform.position + Vector3.up * 0.5f, transform.forward, obstacleDetectRange, obstacleMask);
+        return Physics.Raycast(transform.position + Vector3.up * 0.5f, dir, obstacleDetectRange, obstacleMask);
     }
 
     void OnCollisionEnter(Collision collision)

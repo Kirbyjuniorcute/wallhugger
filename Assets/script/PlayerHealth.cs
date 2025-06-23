@@ -50,6 +50,14 @@ public class PlayerHealth : MonoBehaviour
         UpdateHurtEffect(); // update hurt effect if health is now higher
     }
 
+    public void SetHealth(int newHealth)
+    {
+        currentHealth = Mathf.Clamp(newHealth, 0, maxHealth);
+        UpdateHealthUI();
+        UpdateHurtEffect();
+    }
+
+
     void UpdateHealthUI()
     {
         if (healthText != null)
