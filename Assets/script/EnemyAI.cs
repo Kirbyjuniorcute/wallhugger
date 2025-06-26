@@ -11,9 +11,12 @@ public class EnemyAI : MonoBehaviour
 
     public float rotationSpeed = 5f;
     public float obstacleDetectRange = 1f;
+    public float attackRange = 2f;
+    public float attackCooldown = 1f; //  Editable cooldown in seconds
     public LayerMask obstacleMask;
     public EnemySpawner spawner;
 
+    private float lastAttackTime = -Mathf.Infinity;
     private Rigidbody rb;
 
     void Start()
@@ -76,20 +79,25 @@ public class EnemyAI : MonoBehaviour
         Vector3 moveVector = transform.forward * moveSpeed;
         moveVector.y = rb.velocity.y;
         rb.velocity = moveVector;
+
+        // Attack with delay
+        if (player != null && Vector3.Distance(transform.position, player.position) <= attackRange)
+        {
+            if (Time.time - lastAttackTime >= attackCooldown)
+            {
+                PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
+                if (playerHealth != null)
+                {
+                    playerHealth.TakeDamage(20);
+                    lastAttackTime = Time.time;
+                }
+            }
+        }
     }
 
     bool IsObstacleInDirection(Vector3 dir)
     {
         return Physics.Raycast(transform.position + Vector3.up * 0.5f, dir, obstacleDetectRange, obstacleMask);
-    }
-
-    void OnCollisionEnter(Collision collision)
-    {
-        PlayerHealth playerHealth = collision.collider.GetComponent<PlayerHealth>();
-        if (playerHealth != null)
-        {
-            playerHealth.TakeDamage(20);
-        }
     }
 
     public void TakeDamage(int amount)
@@ -101,6 +109,11 @@ public class EnemyAI : MonoBehaviour
         {
             if (spawner != null)
                 spawner.OnEnemyDied();
+
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.AddEnemyKillXP();
+            }
 
             gameObject.SetActive(false);
         }

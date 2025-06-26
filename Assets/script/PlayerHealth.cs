@@ -77,6 +77,12 @@ public class PlayerHealth : MonoBehaviour
     void Die()
     {
         Debug.Log("Player died! Loading next scene...");
+
+        if (ScoreManager.Instance != null)
+        {
+            ScoreManager.Instance.SaveHighScore();
+        }
+
         SceneManager.LoadScene(nextSceneName);
     }
 }

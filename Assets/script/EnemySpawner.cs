@@ -23,11 +23,11 @@ public class EnemySpawner : MonoBehaviour
     [Header("UI")]
     public Text waveText;
 
-    [Header("Enemy Prefab")]
-    public GameObject enemyPrefab;
+    [Header("Enemy Prefabs (Multiple)")]
+    public GameObject[] enemyPrefabs; // Now an array of prefabs
 
     [Header("Spawn Offset")]
-    public float spawnOffsetDistance = 2f; // Editable in Inspector
+    public float spawnOffsetDistance = 2f;
 
     private int enemiesAlive = 0;
     private bool isSpawningWave = false;
@@ -60,6 +60,12 @@ public class EnemySpawner : MonoBehaviour
     {
         isSpawningWave = true;
         currentWave++;
+
+        if (currentWave > 1 && ScoreManager.Instance != null)
+        {
+            ScoreManager.Instance.AddWaveXP();
+        }
+
         int enemiesToSpawn = enemiesPerWave + (currentWave - 1) * increasePerWave;
 
         if (waveText != null)
@@ -101,20 +107,20 @@ public class EnemySpawner : MonoBehaviour
 
         if (enemyToSpawn == null)
         {
-            if (enemyPrefab != null)
+            if (enemyPrefabs.Length > 0)
             {
-                enemyToSpawn = Instantiate(enemyPrefab);
+                GameObject prefab = enemyPrefabs[UnityEngine.Random.Range(0, enemyPrefabs.Length)];
+                enemyToSpawn = Instantiate(prefab);
                 Array.Resize(ref enemiesPool, enemiesPool.Length + 1);
                 enemiesPool[enemiesPool.Length - 1] = enemyToSpawn;
             }
             else
             {
-                Debug.LogWarning("No available enemies in pool, and no prefab assigned.");
+                Debug.LogWarning("No enemy prefabs assigned.");
                 return;
             }
         }
 
-        // Generate a random direction on the XZ plane
         Vector3 offset = new Vector3(UnityEngine.Random.Range(-1f, 1f), 0, UnityEngine.Random.Range(-1f, 1f)).normalized * spawnOffsetDistance;
         Vector3 spawnPosition = spawnPoint.position + offset;
 
