@@ -12,6 +12,7 @@ public class PlayerMelee : MonoBehaviour
     [Header("References")]
     public GameObject meleeHitBox; // The cube that checks for hits
     public GameObject[] meleeAnimationSteps; // Multiple sprite frames for the melee animation
+    public GameObject[] objectsToDisableDuringMelee; // Objects to disable temporarily during melee
 
     private bool isMeleeActive = false;
 
@@ -33,6 +34,13 @@ public class PlayerMelee : MonoBehaviour
     {
         isMeleeActive = true;
 
+        // Disable extra objects (e.g., UI, weapons, crosshair)
+        foreach (GameObject obj in objectsToDisableDuringMelee)
+        {
+            if (obj != null)
+                obj.SetActive(false);
+        }
+
         if (meleeHitBox != null)
             meleeHitBox.SetActive(true);
 
@@ -40,12 +48,10 @@ public class PlayerMelee : MonoBehaviour
 
         for (int i = 0; i < meleeAnimationSteps.Length; i++)
         {
-            // Enable current sprite
             DisableAllMeleeSprites();
             if (meleeAnimationSteps[i] != null)
                 meleeAnimationSteps[i].SetActive(true);
 
-            // Only detect hit on first frame (or modify this logic if needed)
             if (i == 0 && meleeHitBox != null)
             {
                 Collider[] hitColliders = Physics.OverlapBox(
@@ -73,6 +79,14 @@ public class PlayerMelee : MonoBehaviour
             meleeHitBox.SetActive(false);
 
         DisableAllMeleeSprites();
+
+        // Re-enable disabled objects
+        foreach (GameObject obj in objectsToDisableDuringMelee)
+        {
+            if (obj != null)
+                obj.SetActive(true);
+        }
+
         isMeleeActive = false;
     }
 
