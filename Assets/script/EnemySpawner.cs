@@ -29,6 +29,10 @@ public class EnemySpawner : MonoBehaviour
     [Header("Spawn Offset")]
     public float spawnOffsetDistance = 2f;
 
+    [Header("Scaling Settings")]
+    public int waveToStartHealthScaling = 5;
+    public int healthIncreasePerWave = 2; // Amount to add to health each wave after threshold
+
     private int enemiesAlive = 0;
     private bool isSpawningWave = false;
 
@@ -66,7 +70,17 @@ public class EnemySpawner : MonoBehaviour
             ScoreManager.Instance.AddWaveXP();
         }
 
-        int enemiesToSpawn = enemiesPerWave + (currentWave - 1) * increasePerWave;
+        int enemiesToSpawn;
+
+        if (currentWave < waveToStartHealthScaling)
+        {
+            enemiesToSpawn = enemiesPerWave + (currentWave - 1) * increasePerWave;
+        }
+        else
+        {
+            enemiesToSpawn = enemiesPerWave + (waveToStartHealthScaling - 1) * increasePerWave;
+        }
+
 
         if (waveText != null)
         {
@@ -131,7 +145,15 @@ public class EnemySpawner : MonoBehaviour
         EnemyAI enemyAI = enemyToSpawn.GetComponent<EnemyAI>();
         if (enemyAI != null)
         {
-            enemyAI.ResetEnemy();
+            int extraHealth = 0;
+
+            // Only increase health after a certain wave
+            if (currentWave >= waveToStartHealthScaling)
+            {
+                extraHealth = (currentWave - waveToStartHealthScaling + 1) * healthIncreasePerWave;
+            }
+
+            enemyAI.ResetEnemy(extraHealth);
             enemyAI.spawner = this;
         }
 

@@ -119,8 +119,9 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    public void ResetEnemy()
+    public void ResetEnemy(int extraHealth = 0)
     {
-        currentHealth = maxHealth;
+        currentHealth = maxHealth + extraHealth;
     }
+
 }
