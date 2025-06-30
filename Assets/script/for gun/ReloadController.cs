@@ -3,15 +3,15 @@ using System.Collections;
 
 public class ReloadController : MonoBehaviour
 {
-    public GunController gunController;        // Reference to the GunController
-    public GameObject objectToDisable;         // Optional: gun model or overlay to hide during reload
-    public AimDownSight adsScript;            // Reference to AimDownSight script
-    public PlayerSlideDuck2 slideScript;       // Reference to PlayerSlideDuck2 script
-    public float adsCancelDelay = 0.2f;        // Delay before canceling ADS (helps avoid animation overlap)
+    public GunController gunController;
+    public GameObject objectToDisable;
+    public AimDownSight adsScript;
+    public PlayerSlideDuck2 slideScript;
+    public float adsCancelDelay = 0.2f;
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R) && !gunController.IsReloading())
+        if (Input.GetKeyDown(KeyCode.R) && gunController != null && !gunController.IsReloading())
         {
             StartCoroutine(ReloadAndToggleObject());
         }
@@ -19,27 +19,26 @@ public class ReloadController : MonoBehaviour
 
     IEnumerator ReloadAndToggleObject()
     {
-        // Cancel ADS if aiming
+        if (gunController == null || gunController.CurrentGun == null)
+            yield break;
+
         if (adsScript != null && adsScript.IsAiming)
         {
             yield return new WaitForSeconds(adsCancelDelay);
         }
 
-        // Hide gun/scope/etc. during reload
         if (objectToDisable != null)
             objectToDisable.SetActive(false);
 
-        // Stop slide visuals if sliding or ducking
-        if (slideScript != null)
+        if (slideScript != null && (slideScript.IsSliding() || slideScript.IsDucking()))
         {
-            if (slideScript.IsSliding() || slideScript.IsDucking())
-                slideScript.ForceStopSlideVisuals();
+            slideScript.ForceStopSlideVisuals();
         }
 
-        // Start the reload coroutine
-        yield return StartCoroutine(gunController.ReloadRoutine());
+        gunController.StartReload();
 
-        // Restore the gun model or visuals
+        yield return new WaitForSeconds(gunController.GetReloadDuration());
+
         if (objectToDisable != null)
             objectToDisable.SetActive(true);
     }

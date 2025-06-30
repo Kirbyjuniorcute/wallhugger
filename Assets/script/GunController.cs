@@ -4,83 +4,86 @@ using System.Collections;
 
 
 
-
-
-
-
 public class GunController : MonoBehaviour
 {
-    [Header("Gun Settings")]
-    public int maxAmmo = 10;
-    public float shootRange = 100f;
-    public float shootForce = 100f;
-    public float reloadDuration = 2f;
+    [Header("Gun Data")]
+    public GunData currentGun;
 
     [Header("References")]
     public Camera fpsCamera;
-
-    [Header("UI")]
     public Text ammoText;
-
-    [Header("Reload Animation")]
-    public GameObject[] reloadSteps;
-
-    [Header("Visual Effects")]
-    public GameObject muzzleFlash;
-    public float flashDuration = 0.05f;
-
-    [Header("Hit Effect")]
-    public GameObject hitEffectPrefab;
-    public float hitEffectDuration = 1f;
-    public float hitEffectScale = 0.5f;
-
     public AimDownSight adsScript;
     public GameObject normalMuzzleFlash;
     public GameObject adsMuzzleFlash;
 
+    [Header("Reload Animation")]
+    public GameObject[] reloadSteps;
+
+    [Header("Hit Effect")]
+    public float hitEffectDuration = 1f;
+    public float hitEffectScale = 0.5f;
+
+    public int CurrentAmmo => currentAmmo;
+    public int MaxAmmo => currentGun != null ? currentGun.maxAmmo : 0;
+    public GunData CurrentGun => currentGun;
+    public float GetReloadDuration() => currentGun != null ? currentGun.reloadDuration : 0f;
+
     private int currentAmmo;
     private bool isReloading = false;
+    private float nextTimeToFire = 0f;
     private PlayerSlideDuck2 slideScript;
     private Coroutine reloadCoroutine;
 
     void Start()
     {
-        currentAmmo = maxAmmo;
-        UpdateAmmoUI();
-        SetReloadSpritesActive(false);
         slideScript = GetComponent<PlayerSlideDuck2>();
+        LoadGun(currentGun);
+        SetReloadSpritesActive(false);
+    }
+
+    public void StartReload()
+    {
+        if (!isReloading && reloadCoroutine == null)
+        {
+            reloadCoroutine = StartCoroutine(ReloadRoutine());
+        }
+    }
+
+    public void LoadGun(GunData newGun)
+    {
+        currentGun = newGun;
+        currentAmmo = currentGun.maxAmmo;
+        UpdateAmmoUI();
     }
 
     void Update()
     {
-        if (isReloading)
-            return;
+        if (isReloading || currentGun == null) return;
 
-        // Block shooting if sliding or ducking
         if (slideScript != null && (slideScript.IsSliding() || slideScript.IsDucking()))
             return;
 
-        if (Input.GetButtonDown("Fire1"))
+        if ((currentGun.gunType == GunType.Automatic && Input.GetButton("Fire1")) ||
+            (currentGun.gunType != GunType.Automatic && Input.GetButtonDown("Fire1")))
         {
-            Shoot();
+            if (Time.time >= nextTimeToFire)
+            {
+                nextTimeToFire = Time.time + currentGun.fireRate;
+                Shoot();
+            }
         }
 
-        // Prevent reloading if sliding
         if (Input.GetKeyDown(KeyCode.R))
         {
             if (slideScript != null && slideScript.IsSliding())
             {
                 Debug.Log("Cannot reload while sliding!");
-                return; // Don't reload
+                return;
             }
 
-            if (reloadCoroutine == null) // Prevent double reload
-            {
-                reloadCoroutine = StartCoroutine(ReloadRoutine());
-            }
+            StartReload();
         }
     }
-
 
     void Shoot()
     {
@@ -95,9 +98,7 @@ public class GunController : MonoBehaviour
         StartCoroutine(ShowMuzzleFlash());
 
         Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-
-        // Use RaycastAll to detect everything hit
-        RaycastHit[] hits = Physics.RaycastAll(ray, shootRange);
+        RaycastHit[] hits = Physics.RaycastAll(ray, currentGun.shootRange);
         float closestEnemyDistance = float.MaxValue;
         RaycastHit? bestHit = null;
         EnemyAI bestEnemy = null;
@@ -107,9 +108,7 @@ public class GunController : MonoBehaviour
             if (hit.collider.isTrigger)
                 continue;
 
-            // Try to find EnemyAI in the object or its parent
             EnemyAI enemy = hit.collider.GetComponent<EnemyAI>() ?? hit.collider.GetComponentInParent<EnemyAI>();
-
             if (enemy != null)
             {
                 float distance = Vector3.Distance(transform.position, hit.point);
@@ -124,100 +123,67 @@ public class GunController : MonoBehaviour
 
         if (bestEnemy != null && bestHit.HasValue)
         {
-            Debug.Log("Enemy hit! Calling TakeDamage on: " + bestEnemy.gameObject.name);
-            bestEnemy.TakeDamage(1);
+            bestEnemy.TakeDamage(currentGun.damagePerShot);
+            Debug.Log("Enemy hit! " + bestEnemy.name);
 
-            if (hitEffectPrefab != null)
+            if (currentGun.hitEffect != null)
             {
-                GameObject effect = Instantiate(hitEffectPrefab, bestHit.Value.point, Quaternion.LookRotation(bestHit.Value.normal));
-
+                GameObject effect = Instantiate(currentGun.hitEffect, bestHit.Value.point, Quaternion.LookRotation(bestHit.Value.normal));
                 Renderer renderer = bestHit.Value.collider.GetComponent<Renderer>();
                 if (renderer != null)
                 {
-                    Vector3 boundsSize = renderer.bounds.size;
-                    float averageSize = (boundsSize.x + boundsSize.y + boundsSize.z) / 3f;
-                    effect.transform.localScale = Vector3.one * averageSize * hitEffectScale;
+                    Vector3 size = renderer.bounds.size;
+                    float scale = (size.x + size.y + size.z) / 3f;
+                    effect.transform.localScale = Vector3.one * scale * hitEffectScale;
                 }
-
                 Destroy(effect, hitEffectDuration);
             }
 
             Rigidbody rb = bestHit.Value.collider.attachedRigidbody;
             if (rb != null)
             {
-                rb.AddForce(-bestHit.Value.normal * shootForce);
+                rb.AddForce(-bestHit.Value.normal * currentGun.shootForce);
             }
-        }
-        else
-        {
-            Debug.Log("No enemy hit.");
         }
     }
 
-
-    public IEnumerator ReloadRoutine()
+    private IEnumerator ReloadRoutine()
     {
         isReloading = true;
         Debug.Log("Reloading...");
 
-        // Disable slide visuals if sliding
-        PlayerSlideDuck2 slideScript = GetComponent<PlayerSlideDuck2>();
-        if (slideScript != null && slideScript.IsSliding())
+        if (adsScript != null && adsScript.IsAiming)
         {
-            slideScript.ForceStopSlideVisuals();
-        }
-
-        AimDownSight ads = GetComponent<AimDownSight>();
-        if (ads != null && ads.IsAiming)
-        {
-            ads.CancelADS(); // stop aiming first
-            yield return new WaitForSeconds(0.2f); // delay to allow ADS animation/transition
+            adsScript.CancelADS();
+            yield return new WaitForSeconds(0.2f);
         }
 
         int stepCount = reloadSteps.Length;
-        float waitTime = stepCount > 0 ? reloadDuration / stepCount : reloadDuration;
+        float waitTime = stepCount > 0 ? currentGun.reloadDuration / stepCount : currentGun.reloadDuration;
 
         for (int i = 0; i < stepCount; i++)
         {
             if (!isReloading) yield break;
 
             SetReloadSpritesActive(false);
-            if (i < reloadSteps.Length && reloadSteps[i] != null)
+            if (reloadSteps[i] != null)
                 reloadSteps[i].SetActive(true);
 
             yield return new WaitForSeconds(waitTime);
         }
 
         SetReloadSpritesActive(false);
-
-        currentAmmo = maxAmmo;
+        currentAmmo = currentGun.maxAmmo;
         UpdateAmmoUI();
         isReloading = false;
         reloadCoroutine = null;
         Debug.Log("Reload complete!");
     }
 
-    public void CancelReload()
-    {
-        if (isReloading && reloadCoroutine != null)
-        {
-            StopCoroutine(reloadCoroutine);
-            reloadCoroutine = null;
-            isReloading = false;
-            SetReloadSpritesActive(false);
-            Debug.Log("Reload canceled due to sliding!");
-        }
-    }
-
-    public bool IsReloading()
-    {
-        return isReloading;
-    }
-
     void UpdateAmmoUI()
     {
         if (ammoText != null)
-            ammoText.text = "Ammo: " + currentAmmo;
+            ammoText.text = $"Ammo: {currentAmmo}";
     }
 
     void SetReloadSpritesActive(bool active)
@@ -232,12 +198,24 @@ public class GunController : MonoBehaviour
     IEnumerator ShowMuzzleFlash()
     {
         GameObject flashToUse = adsScript != null && adsScript.IsAiming ? adsMuzzleFlash : normalMuzzleFlash;
-
         if (flashToUse != null)
         {
             flashToUse.SetActive(true);
-            yield return new WaitForSeconds(flashDuration);
+            yield return new WaitForSeconds(currentGun.flashDuration);
             flashToUse.SetActive(false);
+        }
+    }
+
+    public bool IsReloading() => isReloading;
+
+    public void CancelReload()
+    {
+        if (isReloading && reloadCoroutine != null)
+        {
+            StopCoroutine(reloadCoroutine);
+            reloadCoroutine = null;
+            isReloading = false;
+            SetReloadSpritesActive(false);
         }
     }
 }
