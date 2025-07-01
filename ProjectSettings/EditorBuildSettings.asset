@@ -9,14 +9,23 @@ EditorBuildSettings:
     path: Assets/Scenes/main menu.unity
     guid: e71743653a5a4b340ad9c4e2499f26e8
   - enabled: 1
+    path: Assets/Scenes/level menu.unity
+    guid: 9c9c3cf083ca3c843935c8ac6f98533e
+  - enabled: 1
     path: Assets/Scenes/test ground/Test play.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
   - enabled: 1
-    path: Assets/Scenes/replay.unity
+    path: Assets/Scenes/stage 1/stage 1 handgun/replay.unity
     guid: 6d36c85e0611f0e48b9f7de2535e244d
   - enabled: 1
-    path: Assets/Scenes/stage 1/level 1 new.unity
+    path: Assets/Scenes/stage 1/stage 1 handgun/level 1 new.unity
     guid: 71fc606cd28999b47aacd31815fc7aac
+  - enabled: 1
+    path: Assets/Scenes/stage 1/stage 1 ar/level 1 new ar.unity
+    guid: b585e31dadb89b348a248b2aec89c407
+  - enabled: 1
+    path: Assets/Scenes/stage 1/stage 1 ar/replay 2.unity
+    guid: 9a829192086c0374c9e4974ed2d11e22
   - enabled: 0
     path: Assets/Scenes/level 1.unity
     guid: e9c5f15cede0c0f468f46580fcbc0695

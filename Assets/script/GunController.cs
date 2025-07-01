@@ -4,6 +4,7 @@ using System.Collections;
 
 
 
+
 public class GunController : MonoBehaviour
 {
     [Header("Gun Data")]
@@ -64,14 +65,19 @@ public class GunController : MonoBehaviour
 
     void Update()
     {
-        if (isReloading || currentGun == null) return;
-
         if (slideScript != null && (slideScript.IsSliding() || slideScript.IsDucking()))
             return;
+        // Block input during reload, no gun, or while sliding/ducking
+        if (isReloading || currentGun == null) return;
+       
 
         if ((currentGun.gunType == GunType.Automatic && Input.GetButton("Fire1")) ||
             (currentGun.gunType != GunType.Automatic && Input.GetButtonDown("Fire1")))
         {
+            //  Block shooting when sliding or ducking
+            if (slideScript != null && (slideScript.IsSliding() || slideScript.IsDucking()))
+                return;
+
             if (Time.time >= nextTimeToFire)
             {
                 nextTimeToFire = Time.time + currentGun.fireRate;
@@ -90,6 +96,7 @@ public class GunController : MonoBehaviour
             StartReload();
         }
     }
+
 
     void Shoot()
     {

@@ -148,18 +148,22 @@ public class PlayerSlideDuck2 : MonoBehaviour
 
         AdjustColliderForCrouch();
 
+        // Disable same objects as in slide
+        ToggleGameObjects(objectsToDisableOnSlide, false);
+
         // Only enable if not aiming
         if (adsScript == null || !adsScript.IsAiming)
         {
             ToggleGameObjects(objectsToEnableOnSlide, true);
         }
+
         GunController gun = GetComponent<GunController>();
         if (gun != null)
         {
             gun.CancelReload();
         }
-
     }
+
 
 
     void StopDuck()
@@ -169,8 +173,10 @@ public class PlayerSlideDuck2 : MonoBehaviour
         isDucking = false;
         ResetCollider();
 
+        ToggleGameObjects(objectsToDisableOnSlide, true);
         ToggleGameObjects(objectsToEnableOnSlide, false);
     }
+
 
     void AdjustColliderForCrouch()
     {

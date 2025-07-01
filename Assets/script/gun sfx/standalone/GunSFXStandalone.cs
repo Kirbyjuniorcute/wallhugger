@@ -19,18 +19,26 @@ public class GunSFXStandalone : MonoBehaviour
     {
         if (Time.timeScale == 0 || gunController == null) return;
 
+        PlayerSlideDuck2 slideScript = gunController.GetComponent<PlayerSlideDuck2>();
+        if (slideScript != null && (slideScript.IsSliding() || slideScript.IsDucking()))
+            return;
+
         if (loopFire)
         {
-            if (Input.GetButtonDown("Fire1") && gunController.CurrentAmmo > 0 && !isFiringLoop)
+            if (Input.GetButtonDown("Fire1") && !isFiringLoop)
             {
-                PlayLoopFire();
+                if (gunController.CurrentAmmo > 0)
+                {
+                    PlayLoopFire();
+                }
             }
+
             if (Input.GetButtonUp("Fire1") && isFiringLoop)
             {
                 StopLoopFire();
             }
 
-            // Stop firing if ammo hits 0 while firing
+            // EXTRA: If player is holding the button but runs out of ammo mid-loop, stop the loop
             if (isFiringLoop && gunController.CurrentAmmo <= 0)
             {
                 StopLoopFire();
@@ -46,9 +54,11 @@ public class GunSFXStandalone : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.R))
         {
-            PlayReload();
+            PlayReload(); // Reload still allowed
         }
     }
+
+
 
     void PlaySingleFire()
     {

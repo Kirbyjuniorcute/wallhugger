@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: ar
   gunType: 2
-  maxAmmo: 10
+  maxAmmo: 30
   fireRate: 0.1
   shootRange: 100
   shootForce: 100
