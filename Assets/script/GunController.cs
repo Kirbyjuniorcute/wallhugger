@@ -27,6 +27,7 @@ public class GunController : MonoBehaviour
     public int MaxAmmo => currentGun != null ? currentGun.maxAmmo : 0;
     public GunData CurrentGun => currentGun;
     public float GetReloadDuration() => currentGun != null ? currentGun.reloadDuration : 0f;
+    public GunSFXPlayer sfxPlayer;
 
     private int currentAmmo;
     private bool isReloading = false;
@@ -45,6 +46,11 @@ public class GunController : MonoBehaviour
     {
         if (!isReloading && reloadCoroutine == null)
         {
+            if (sfxPlayer != null)
+            {
+                sfxPlayer.PlayReload();
+            }
+
             reloadCoroutine = StartCoroutine(ReloadRoutine());
         }
     }
@@ -94,6 +100,10 @@ public class GunController : MonoBehaviour
         }
 
         currentAmmo--;
+        if (sfxPlayer != null)
+        {
+            sfxPlayer.PlayFire();
+        }
         UpdateAmmoUI();
         StartCoroutine(ShowMuzzleFlash());
 
@@ -144,6 +154,12 @@ public class GunController : MonoBehaviour
             {
                 rb.AddForce(-bestHit.Value.normal * currentGun.shootForce);
             }
+        
+            if (sfxPlayer != null && currentGun.gunType != GunType.Automatic)
+            {
+                sfxPlayer.StopLoop();
+            }
+
         }
     }
 
